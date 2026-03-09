@@ -1,0 +1,13 @@
+{
+  "name": "stripe-chrome-ex",
+  "version": "1.0.0",
+  "description": "Stripe Test Helper Chrome Extension",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}
