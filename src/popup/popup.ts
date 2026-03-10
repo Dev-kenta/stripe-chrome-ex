@@ -9,6 +9,8 @@ import { sendMessage } from './send-message'
 import { s01ApiKey } from './screens/s01-api-key'
 import { s02Search } from './screens/s02-search'
 import { s03Menu } from './screens/s03-menu'
+import { s04Subscriptions } from './screens/s04-subscriptions'
+import { s05CancelConfirm } from './screens/s05-cancel-confirm'
 
 // アプリケーション状態
 const appState: AppState = {}
@@ -18,8 +20,8 @@ const screens: Record<ScreenId, Screen> = {
   S01: s01ApiKey,
   S02: s02Search,
   S03: s03Menu,
-  S04: createPlaceholderScreen('S04', 'サブスクリプション一覧'),
-  S05: createPlaceholderScreen('S05', 'キャンセル確認'),
+  S04: s04Subscriptions,
+  S05: s05CancelConfirm,
   S06: createPlaceholderScreen('S06', 'Invoice一覧'),
   S07: createPlaceholderScreen('S07', '残高追加確認'),
 }
