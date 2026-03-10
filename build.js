@@ -30,6 +30,7 @@ async function build() {
   const entryPoints = [
     { in: 'src/popup/popup.ts', out: 'dist/popup' },
     { in: 'src/background/service-worker.ts', out: 'dist/service-worker' },
+    { in: 'src/content/stripe-proxy.ts', out: 'dist/content-script' },
   ]
 
   if (isWatch) {

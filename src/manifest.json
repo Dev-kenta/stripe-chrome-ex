@@ -3,8 +3,18 @@
   "name": "Stripe Test Helper",
   "version": "1.0.0",
   "description": "Stripe テスト環境操作ヘルパー（QA・開発チーム向け）",
-  "permissions": ["storage"],
-  "host_permissions": ["https://api.stripe.com/*"],
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://api.stripe.com/*",
+    "https://stg.form.run/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://stg.form.run/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "service-worker.js"
   },

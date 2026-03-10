@@ -291,20 +291,58 @@ async function handleListSubscriptions(
 }
 
 /**
+ * コンテントスクリプト経由でStripe APIに書き込みリクエストを送信
+ * stg.form.run ページの Origin (https://stg.form.run) を使うため
+ * chrome-extension:// Origin をブロックする Cloudflare のルールを回避できる
+ */
+async function proxyRequest<T>(
+  method: 'DELETE' | 'POST',
+  path: string,
+  params?: Record<string, string>
+): Promise<ResponseMessage<T>> {
+  const apiKey = await loadApiKey()
+  if (!apiKey) {
+    return { ok: false, error: 'APIキーが設定されていません', code: 'API_KEY_NOT_FOUND' }
+  }
+
+  // stg.form.run のタブを探す
+  const tabs = await chrome.tabs.query({ url: 'https://stg.form.run/*' })
+  const tabId = tabs[0]?.id
+  if (!tabId) {
+    return {
+      ok: false,
+      error: 'stg.form.run のタブが見つかりません。stg.form.run を開いてから再試行してください。',
+      code: 'PROXY_TAB_NOT_FOUND',
+    }
+  }
+
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, {
+      action: 'STRIPE_PROXY',
+      method,
+      path,
+      params,
+      apiKey,
+    })
+    return response as ResponseMessage<T>
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'コンテントスクリプトへの通信に失敗しました',
+    }
+  }
+}
+
+/**
  * サブスクリプションキャンセル
  * DELETE /v1/subscriptions/{subscriptionId}
- *
- * TODO: Chrome拡張機能のService Workerからfetchすると Chrome が自動付与する
- *   `Origin: chrome-extension://{extension_id}` ヘッダーを Cloudflare がブロックし、
- *   Stripe のバックエンドに到達する前に HTTP 429 が返される。
- *   GETリクエストは通過するが、DELETEなどの書き込み操作のみブロックされることを確認済み。
- *   対策: 社内プロキシ（例: stg.form.run の Rails エンドポイント）経由でキャンセルを
- *   実行するよう変更することで回避できる。
+ * SW から直接 fetch すると Origin: chrome-extension:// が付与されて Cloudflare にブロックされるため、
+ * stg.form.run に挿入したコンテントスクリプト経由で実行する
  */
 async function handleCancelSubscription(
   subscriptionId: string
 ): Promise<ResponseMessage<CancelSubscriptionData>> {
-  const result = await stripeRequest<StripeSubscription>('DELETE', `/v1/subscriptions/${subscriptionId}`)
+  const result = await proxyRequest<StripeSubscription>('DELETE', `/v1/subscriptions/${subscriptionId}`)
 
   if (!result.ok) {
     return result
@@ -343,12 +381,13 @@ async function handleListInvoices(customerId: string): Promise<ResponseMessage<L
 /**
  * キャッシュ残高追加
  * POST /v1/test_helpers/customers/{customerId}/fund_cash_balance
+ * 書き込み操作のため、コンテントスクリプト経由で実行する
  */
 async function handleAddCashBalance(
   customerId: string,
   amount: number
 ): Promise<ResponseMessage<AddCashBalanceData>> {
-  const result = await stripeRequest<{ amount: number; currency: string }>(
+  const result = await proxyRequest<{ amount: number; currency: string }>(
     'POST',
     `/v1/test_helpers/customers/${customerId}/fund_cash_balance`,
     {
