@@ -3,22 +3,25 @@
 // Popup エントリポイント
 // 画面遷移とService Workerとの通信を管理
 
-import type { RequestMessage, ResponseMessage } from '../types/messages'
 import type { AppState, ScreenId, Screen } from './types'
 import { createLoadingSpinner } from './components/loading-spinner'
+import { sendMessage } from './send-message'
+import { s01ApiKey } from './screens/s01-api-key'
+import { s02Search } from './screens/s02-search'
+import { s03Menu } from './screens/s03-menu'
 
 // アプリケーション状態
 const appState: AppState = {}
 
-// 画面マップ（Step 6で各画面を実装）
+// 画面マップ
 const screens: Record<ScreenId, Screen> = {
-  S01: createPlaceholderScreen('S01', 'APIキー設定画面'),
-  S02: createPlaceholderScreen('S02', '顧客検索画面'),
-  S03: createPlaceholderScreen('S03', 'サブスクリプション一覧画面'),
-  S04: createPlaceholderScreen('S04', 'サブスクリプションキャンセル確認画面'),
-  S05: createPlaceholderScreen('S05', 'インボイス一覧画面'),
-  S06: createPlaceholderScreen('S06', 'インボイス詳細画面'),
-  S07: createPlaceholderScreen('S07', 'キャッシュ残高追加画面'),
+  S01: s01ApiKey,
+  S02: s02Search,
+  S03: s03Menu,
+  S04: createPlaceholderScreen('S04', 'サブスクリプション一覧'),
+  S05: createPlaceholderScreen('S05', 'キャンセル確認'),
+  S06: createPlaceholderScreen('S06', 'Invoice一覧'),
+  S07: createPlaceholderScreen('S07', '残高追加確認'),
 }
 
 /**
@@ -125,27 +128,7 @@ export function navigate(screenId: ScreenId, stateUpdate?: Partial<AppState>): v
   app.replaceChildren(screen.render(appState, navigate))
 }
 
-/**
- * Service Workerにメッセージを送信する
- * @param message リクエストメッセージ
- * @returns レスポンスメッセージ
- */
-export async function sendMessage<T = unknown>(message: RequestMessage): Promise<ResponseMessage<T>> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response: ResponseMessage<T>) => {
-      // エラーチェック
-      if (chrome.runtime.lastError) {
-        resolve({
-          ok: false,
-          error: chrome.runtime.lastError.message || 'メッセージ送信に失敗しました',
-        })
-        return
-      }
-
-      resolve(response)
-    })
-  })
-}
+export { sendMessage } from './send-message'
 
 /**
  * アプリケーション初期化
