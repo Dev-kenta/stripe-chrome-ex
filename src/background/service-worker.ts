@@ -64,7 +64,7 @@ async function stripeRequest<T>(
     let url = `${STRIPE_API_BASE}${path}`
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Stripe-Version': '2020-08-27',
     }
 
     let body: string | undefined
@@ -73,11 +73,16 @@ async function stripeRequest<T>(
       const queryString = new URLSearchParams(params).toString()
       url += `?${queryString}`
     } else if ((method === 'POST' || method === 'DELETE') && params) {
-      body = new URLSearchParams(params).toString()
+      const bodyStr = new URLSearchParams(params).toString()
+      if (bodyStr) {
+        body = bodyStr
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
+      }
     }
 
     // API リクエスト実行
-    const response = await fetch(url, { method, headers, body })
+    // credentials: 'omit' でブラウザのセッションクッキーを除外する
+    const response = await fetch(url, { method, headers, body, credentials: 'omit' })
 
     // エラーハンドリング
     if (!response.ok) {
@@ -89,6 +94,15 @@ async function stripeRequest<T>(
           ok: false,
           error: 'APIキーが無効です。再設定してください。',
           code: 'API_KEY_INVALID',
+        }
+      }
+
+      // レートリミット
+      if (response.status === 429) {
+        return {
+          ok: false,
+          error: 'リクエストが多すぎます。少し待ってから再試行してください。',
+          code: 'RATE_LIMIT',
         }
       }
 
@@ -279,6 +293,13 @@ async function handleListSubscriptions(
 /**
  * サブスクリプションキャンセル
  * DELETE /v1/subscriptions/{subscriptionId}
+ *
+ * TODO: Chrome拡張機能のService Workerからfetchすると Chrome が自動付与する
+ *   `Origin: chrome-extension://{extension_id}` ヘッダーを Cloudflare がブロックし、
+ *   Stripe のバックエンドに到達する前に HTTP 429 が返される。
+ *   GETリクエストは通過するが、DELETEなどの書き込み操作のみブロックされることを確認済み。
+ *   対策: 社内プロキシ（例: stg.form.run の Rails エンドポイント）経由でキャンセルを
+ *   実行するよう変更することで回避できる。
  */
 async function handleCancelSubscription(
   subscriptionId: string
