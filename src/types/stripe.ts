@@ -5,6 +5,7 @@ export interface StripeCustomer {
   object: 'customer'
   email: string | null
   name: string | null
+  description: string | null
   metadata: Record<string, string>
   created: number
   currency: string | null
