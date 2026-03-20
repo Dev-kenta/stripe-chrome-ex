@@ -151,20 +151,35 @@ function createSubscriptionCard(sub: StripeSubscription, navigate: NavigateFn): 
     card.addEventListener('click', () => navigate('S05', { selectedSubscription: sub }))
   }
 
-  // ── 1行目: ステータスバッジ + プラン名 ──
+  // ── 1行目: ステータスバッジ + プラン名 + price ID ──
   const row1 = div(`display: flex; align-items: center; gap: 8px; margin-bottom: 8px;`)
   row1.appendChild(createStatusBadge(sub.status))
 
+  const nameBlock = div(`flex: 1; overflow: hidden;`)
   const planName = el('p', getPlanName(sub), `
     font-size: 13px;
     font-weight: 600;
     color: #1a1a2e;
-    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   `)
-  row1.appendChild(planName)
+  nameBlock.appendChild(planName)
+
+  const item0 = sub.items.data[0]
+  if (item0) {
+    const priceId = el('p', item0.price.id, `
+      font-size: 10px;
+      color: #9ca3af;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
+    `)
+    nameBlock.appendChild(priceId)
+  }
+
+  row1.appendChild(nameBlock)
 
   // ── 2行目: 金額 + 期間 ──
   const row2 = div(`display: flex; justify-content: space-between; align-items: center;`)
@@ -231,7 +246,7 @@ function getPlanName(sub: StripeSubscription): string {
   if (!item) return '(プランなし)'
   const product = item.price.product
   if (typeof product === 'object') return product.name
-  return item.price.id
+  return '(プラン名不明)'
 }
 
 function formatAmount(sub: StripeSubscription): string {

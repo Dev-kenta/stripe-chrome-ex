@@ -276,6 +276,7 @@ async function handleListSubscriptions(
 ): Promise<ResponseMessage<ListSubscriptionsData>> {
   const result = await stripeRequest<StripeListResponse<StripeSubscription>>('GET', '/v1/subscriptions', {
     customer: customerId,
+    'expand[]': 'data.items.data.price.product',
   })
 
   if (!result.ok) {
