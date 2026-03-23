@@ -85,8 +85,17 @@ export const s05CancelConfirm: Screen = {
     `)
     card.appendChild(cardTitle)
 
+    const planRows: [string, string][] = sub
+      ? sub.items.data.map((item, i) => {
+          const product = item.price.product
+          const name = typeof product === 'object' ? product.name : item.price.id
+          const label = sub.items.data.length > 1 ? `プラン ${i + 1}` : 'プラン'
+          return [label, name] as [string, string]
+        })
+      : [['プラン', '-']]
+
     const rows: [string, string][] = [
-      ['プラン',       getPlanName(sub)],
+      ...planRows,
       ['ステータス',   getStatusLabel(sub?.status)],
       ['金額',         formatAmount(sub)],
       ['現在の期間',   formatPeriod(sub)],
@@ -122,12 +131,16 @@ export const s05CancelConfirm: Screen = {
 
     body.appendChild(card)
 
-    // ── スペーサー ──
-    const spacer = div(`flex: 1;`)
-    body.appendChild(spacer)
-
     // ── ボタンエリア ──
-    const btnArea = div(`display: flex; flex-direction: column; gap: 10px;`)
+    const btnArea = div(`
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e5e7eb;
+      flex-shrink: 0;
+    `)
 
     // エラーメッセージ
     const errorText = el('p', '', `
@@ -203,8 +216,8 @@ export const s05CancelConfirm: Screen = {
 
     btnArea.appendChild(cancelBtn)
     btnArea.appendChild(backBtnBottom)
-    body.appendChild(btnArea)
     container.appendChild(body)
+    container.appendChild(btnArea)
 
     return container
   },
@@ -243,15 +256,6 @@ function showSuccessToast(): void {
 }
 
 // ── ヘルパー ──
-
-function getPlanName(sub: AppState['selectedSubscription']): string {
-  if (!sub) return '-'
-  const item = sub.items.data[0]
-  if (!item) return '(プランなし)'
-  const product = item.price.product
-  if (typeof product === 'object') return product.name
-  return item.price.id
-}
 
 function getStatusLabel(status: string | undefined): string {
   const map: Record<string, string> = {

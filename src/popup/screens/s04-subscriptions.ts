@@ -113,14 +113,19 @@ function renderList(
     return
   }
 
-  const count = el('p', `${subscriptions.length} 件`, `
+  const MAX_SUBSCRIPTIONS = 5
+  const displayed = subscriptions.slice(0, MAX_SUBSCRIPTIONS)
+  const countText = subscriptions.length > MAX_SUBSCRIPTIONS
+    ? `${subscriptions.length} 件中 ${MAX_SUBSCRIPTIONS} 件を表示`
+    : `${subscriptions.length} 件`
+  const count = el('p', countText, `
     font-size: 12px;
     color: #6b7280;
     margin-bottom: 10px;
   `)
   area.appendChild(count)
 
-  for (const sub of subscriptions) {
+  for (const sub of displayed) {
     area.appendChild(createSubscriptionCard(sub, navigate))
   }
 }
@@ -155,28 +160,38 @@ function createSubscriptionCard(sub: StripeSubscription, navigate: NavigateFn): 
   const row1 = div(`display: flex; align-items: center; gap: 8px; margin-bottom: 8px;`)
   row1.appendChild(createStatusBadge(sub.status))
 
+  const MAX_ITEMS = 5
   const nameBlock = div(`flex: 1; overflow: hidden;`)
-  const planName = el('p', getPlanName(sub), `
-    font-size: 13px;
-    font-weight: 600;
-    color: #1a1a2e;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `)
-  nameBlock.appendChild(planName)
-
-  const item0 = sub.items.data[0]
-  if (item0) {
-    const priceId = el('p', item0.price.id, `
+  if (sub.items.data.length === 0) {
+    nameBlock.appendChild(el('p', '(プランなし)', `font-size: 13px; font-weight: 600; color: #1a1a2e;`))
+  }
+  for (const item of sub.items.data.slice(0, MAX_ITEMS)) {
+    const product = item.price.product
+    const name = typeof product === 'object' ? product.name : '(プラン名不明)'
+    nameBlock.appendChild(el('p', name, `
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a2e;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    `))
+    nameBlock.appendChild(el('p', item.price.id, `
       font-size: 10px;
       color: #9ca3af;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       margin-top: 2px;
-    `)
-    nameBlock.appendChild(priceId)
+      margin-bottom: 4px;
+    `))
+  }
+  if (sub.items.data.length > MAX_ITEMS) {
+    nameBlock.appendChild(el('p', `他 ${sub.items.data.length - MAX_ITEMS} 件`, `
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    `))
   }
 
   row1.appendChild(nameBlock)
@@ -239,14 +254,6 @@ function createStatusBadge(status: StripeSubscriptionStatus): HTMLElement {
     flex-shrink: 0;
   `)
   return badge
-}
-
-function getPlanName(sub: StripeSubscription): string {
-  const item = sub.items.data[0]
-  if (!item) return '(プランなし)'
-  const product = item.price.product
-  if (typeof product === 'object') return product.name
-  return '(プラン名不明)'
 }
 
 function formatAmount(sub: StripeSubscription): string {
