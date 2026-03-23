@@ -237,6 +237,23 @@ function renderResults(
       item.appendChild(desc)
     }
     item.appendChild(idEl)
+
+    const dashboardBtn = el('button', 'Stripeダッシュボード ↗', `
+      margin-top: 8px;
+      font-size: 11px;
+      color: #635bff;
+      background: none;
+      border: 1px solid #635bff;
+      border-radius: 4px;
+      padding: 2px 8px;
+      cursor: pointer;
+    `)
+    dashboardBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      chrome.tabs.create({ url: `https://dashboard.stripe.com/test/customers/${customer.id}` })
+    })
+    item.appendChild(dashboardBtn)
+
     item.addEventListener('click', () => {
       navigate('S03', { customer })
     })

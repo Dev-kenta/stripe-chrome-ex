@@ -17,6 +17,7 @@ import type {
 import type {
   StripeCustomer,
   StripeSubscription,
+  StripeProduct,
   StripeInvoice,
   StripeSearchResponse,
   StripeListResponse,
@@ -282,10 +283,45 @@ async function handleListSubscriptions(
     return result
   }
 
+  const subscriptions = result.data.data
+
+  // サブスクに含まれるユニークなproduct IDを収集
+  const productIds = new Set<string>()
+  for (const sub of subscriptions) {
+    for (const item of sub.items.data) {
+      if (typeof item.price.product === 'string') {
+        productIds.add(item.price.product)
+      }
+    }
+  }
+
+  // 各productを並列取得してマップ化
+  const productMap = new Map<string, StripeProduct>()
+  await Promise.all(
+    Array.from(productIds).map(async (productId) => {
+      const res = await stripeRequest<StripeProduct>('GET', `/v1/products/${productId}`)
+      if (res.ok) {
+        productMap.set(productId, res.data)
+      }
+    })
+  )
+
+  // price.product（string）をStripeProductオブジェクトに置換
+  for (const sub of subscriptions) {
+    for (const item of sub.items.data) {
+      if (typeof item.price.product === 'string') {
+        const product = productMap.get(item.price.product)
+        if (product) {
+          item.price.product = product
+        }
+      }
+    }
+  }
+
   return {
     ok: true,
     data: {
-      subscriptions: result.data.data,
+      subscriptions,
     },
   }
 }
